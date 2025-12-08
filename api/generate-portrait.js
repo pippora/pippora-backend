@@ -43,7 +43,9 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: "dall-e-3",
-        prompt: `Create a detailed Renaissance-style portrait of a ${petType}. The ${petType} should be seamlessly blended into the body of a regal 18th-century military general wearing an ornate dark navy and gold embroidered uniform with epaulets, medals, and a high collar. Use soft, painterly textures and warm lighting reminiscent of classical oil paintings. The background should be a muted, cloudy gradient in warm beige, rose, and gold tones to resemble an aged painted backdrop. The ${petType}'s head must be realistically integrated into the uniform — matching lighting, shadows, and painterly brush strokes for perfect realism. Style: Renaissance / Oil Painting / Historical Portrait. Medium: Digital painting with visible brush strokes. Composition: Head and shoulders, centered, noble expression. Lighting: Warm, soft, golden hour tones.`,
+        prompt: `With the uploaded picture of the dog, Create an image were the dog or pet is dressed in a Renaissance costume of a General,
+chiaroscuro lighting that defines Renaissance portraiture, clearly recognizes the face of the dog from the uploaded picture.
+including dramatic lighting, rich deep colors, ornate period clothing, and formal compositions.  Style: Renaissance / Oil Painting / Historical Portrait. Medium: Digital painting with visible brush strokes. Composition: Head and shoulders, centered, noble expression. Lighting: Warm, soft, golden hour tones.`,
         n: 1,
         size: "1024x1792",
         quality: "hd"
