@@ -1,5 +1,53 @@
 // api/generate-portrait.js
-// Backend with GPT-4 Vision + DALL-E 3 integration
+// Backend with GPT-4 Vision + DALL-E 3 + Rate Limiting
+
+// In-memory storage for rate limiting (resets on deployment)
+// For production, consider using Redis or a database
+const rateLimitStore = {
+  emails: new Map(), // email -> { count, resetTime }
+  ips: new Map()     // ip -> { count, resetTime }
+};
+
+// Whitelist of emails that bypass rate limits
+const WHITELISTED_EMAILS = [
+  // Add your test emails here, e.g.:
+  // 'your-email@example.com',
+  // 'team@pippora.com'
+];
+
+function cleanupOldEntries(store) {
+  const now = Date.now();
+  for (const [key, value] of store.entries()) {
+    if (now > value.resetTime) {
+      store.delete(key);
+    }
+  }
+}
+
+function checkRateLimit(identifier, store, limit, windowMs) {
+  cleanupOldEntries(store);
+  
+  const now = Date.now();
+  const record = store.get(identifier);
+  
+  if (!record) {
+    store.set(identifier, { count: 1, resetTime: now + windowMs });
+    return { allowed: true, remaining: limit - 1 };
+  }
+  
+  if (now > record.resetTime) {
+    store.set(identifier, { count: 1, resetTime: now + windowMs });
+    return { allowed: true, remaining: limit - 1 };
+  }
+  
+  if (record.count >= limit) {
+    const resetIn = Math.ceil((record.resetTime - now) / 1000 / 60); // minutes
+    return { allowed: false, remaining: 0, resetIn };
+  }
+  
+  record.count++;
+  return { allowed: true, remaining: limit - record.count };
+}
 
 export default async function handler(req, res) {
   // Enable CORS
@@ -29,12 +77,58 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Pet image is required' });
     }
 
-    // Get API keys from environment variables
+    // Get API keys and settings from environment variables
     const openaiKey = process.env.OPENAI_API_KEY;
     const mailerliteKey = process.env.MAILERLITE_API_KEY;
+    const rateLimitEnabled = process.env.RATE_LIMIT_ENABLED === 'true';
     
     if (!openaiKey) {
       return res.status(500).json({ error: 'OpenAI API key not configured' });
+    }
+
+    // RATE LIMITING (if enabled)
+    if (rateLimitEnabled) {
+      const isWhitelisted = WHITELISTED_EMAILS.includes(email.toLowerCase());
+      
+      if (!isWhitelisted) {
+        // Check email rate limit: 5 per day
+        const emailLimit = checkRateLimit(
+          email.toLowerCase(),
+          rateLimitStore.emails,
+          5,
+          24 * 60 * 60 * 1000 // 24 hours
+        );
+        
+        if (!emailLimit.allowed) {
+          return res.status(429).json({
+            error: `Rate limit exceeded. You can generate ${emailLimit.remaining} more portraits. Try again in ${emailLimit.resetIn} minutes.`,
+            rateLimitExceeded: true
+          });
+        }
+        
+        // Check IP rate limit: 7 per day
+        const clientIp = req.headers['x-forwarded-for']?.split(',')[0] || 
+                        req.headers['x-real-ip'] || 
+                        req.socket.remoteAddress;
+        
+        const ipLimit = checkRateLimit(
+          clientIp,
+          rateLimitStore.ips,
+          7,
+          24 * 60 * 60 * 1000 // 24 hours
+        );
+        
+        if (!ipLimit.allowed) {
+          return res.status(429).json({
+            error: `Too many requests from your location. Try again in ${ipLimit.resetIn} minutes.`,
+            rateLimitExceeded: true
+          });
+        }
+        
+        console.log(`Rate limit status - Email: ${emailLimit.remaining}/5, IP: ${ipLimit.remaining}/7`);
+      } else {
+        console.log(`Whitelisted email: ${email}`);
+      }
     }
 
     // STEP 1: Analyze the pet image with GPT-4 Vision
