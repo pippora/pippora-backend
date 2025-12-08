@@ -11,8 +11,8 @@ const rateLimitStore = {
 // Whitelist of emails that bypass rate limits
 const WHITELISTED_EMAILS = [
   // Add your test emails here, e.g.:
-  // 'your-email@example.com',
-  // 'team@pippora.com'
+  // 'tedvanderende@yahoo.com',
+  // 'contact@pippora.com'
 ];
 
 function cleanupOldEntries(store) {
