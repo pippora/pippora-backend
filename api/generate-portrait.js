@@ -27,11 +27,12 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Valid email is required' });
     }
 
-    // Get API key from environment variable (secure!)
-    const apiKey = process.env.OPENAI_API_KEY;
+    // Get API keys from environment variables (secure!)
+    const openaiKey = process.env.OPENAI_API_KEY;
+    const mailerliteKey = process.env.MAILERLITE_API_KEY;
     
-    if (!apiKey) {
-      return res.status(500).json({ error: 'API key not configured' });
+    if (!openaiKey) {
+      return res.status(500).json({ error: 'OpenAI API key not configured' });
     }
 
     // Call OpenAI API
@@ -39,13 +40,22 @@ export default async function handler(req, res) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
+        'Authorization': `Bearer ${openaiKey}`
       },
       body: JSON.stringify({
         model: "dall-e-3",
-        prompt: `With the uploaded picture of the dog, Create an image were the dog or pet is dressed in a Renaissance costume of a General,
-chiaroscuro lighting that defines Renaissance portraiture, clearly recognizes the face of the dog from the uploaded picture.
-including dramatic lighting, rich deep colors, ornate period clothing, and formal compositions.  Style: Renaissance / Oil Painting / Historical Portrait. Medium: Digital painting with visible brush strokes. Composition: Head and shoulders, centered, noble expression. Lighting: Warm, soft, golden hour tones.`,
+        prompt: `Create a detailed Renaissance-style portrait painting. IMPORTANT: The subject must be a ${petType} (keep the exact same animal species as described). The ${petType}'s face and features should look natural and realistic for that specific type of animal - do not change it into a different animal. 
+
+The ${petType} should be wearing the uniform of a regal 18th-century military general: ornate dark navy and gold embroidered jacket with epaulets, medals, and a high collar. Use soft, painterly textures and warm lighting reminiscent of classical oil paintings. 
+
+The background should be a muted, cloudy gradient in warm beige, rose, and gold tones to resemble an aged painted backdrop. 
+
+The ${petType}'s head must be realistically integrated into the uniform with proper proportions - matching lighting, shadows, and painterly brush strokes for perfect realism. The animal should maintain its natural appearance and species characteristics.
+
+Style: Renaissance oil painting, historical portrait
+Composition: Head and shoulders, centered, noble dignified pose
+Lighting: Warm, soft, golden hour tones
+Important: Do not transform the animal into a different species - keep it as the original ${petType} described.`,
         n: 1,
         size: "1024x1792",
         quality: "hd"
@@ -58,7 +68,32 @@ including dramatic lighting, rich deep colors, ornate period clothing, and forma
       return res.status(500).json({ error: data.error.message });
     }
 
-    // Log email for your records (optional - you can also save to a database)
+    // Add email to MailerLite (if API key is configured)
+    if (mailerliteKey) {
+      try {
+        await fetch('https://connect.mailerlite.com/api/subscribers', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${mailerliteKey}`,
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+            email: email,
+            groups: ['169718727485425367'],
+            fields: {
+              source: 'Renaissance Pet Portrait Generator'
+            }
+          })
+        });
+        console.log('Email added to MailerLite:', email);
+      } catch (mlError) {
+        // Don't fail the whole request if MailerLite fails
+        console.error('MailerLite error:', mlError);
+      }
+    }
+
+    // Log email for your records
     console.log('New lead:', email);
 
     // Return the generated image URL
