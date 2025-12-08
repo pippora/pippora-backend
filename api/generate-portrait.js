@@ -44,18 +44,29 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: "dall-e-3",
-        prompt: `Create a detailed Renaissance-style portrait painting. IMPORTANT: The subject must be a ${petType} (keep the exact same animal species as described). The ${petType}'s face and features should look natural and realistic for that specific type of animal - do not change it into a different animal. 
+        prompt: `Create a Renaissance-era pet portrait using the uploaded pet photo for the head. Keep the pet's face, markings, and expression exactly as shown in the uploaded image. Place the head naturally onto a historically accurate Renaissance general's body.
 
-The ${petType} should be wearing the uniform of a regal 18th-century military general: ornate dark navy and gold embroidered jacket with epaulets, medals, and a high collar. Use soft, painterly textures and warm lighting reminiscent of classical oil paintings. 
+The outfit should include:
+– ornate embroidered military coat
+– gold trims and shoulder epaulettes
+– a high collar
+– rich textures like velvet, brocade or leather
+– subtle metallic armor elements (optional, if stylistically appropriate)
 
-The background should be a muted, cloudy gradient in warm beige, rose, and gold tones to resemble an aged painted backdrop. 
+Match lighting, chiaroscuro lighting, shadows, and color tones so the pet's head blends seamlessly with the painted Renaissance-style body.
 
-The ${petType}'s head must be realistically integrated into the uniform with proper proportions - matching lighting, shadows, and painterly brush strokes for perfect realism. The animal should maintain its natural appearance and species characteristics.
+The final artwork should look like a classical oil painting from the 1500–1700s, with dramatic lighting, painterly brushstrokes, deep shadows, and warm tones.
 
-Style: Renaissance oil painting, historical portrait
-Composition: Head and shoulders, centered, noble dignified pose
-Lighting: Warm, soft, golden hour tones
-Important: Do not transform the animal into a different species - keep it as the original ${petType} described.`,
+Composition:
+– Bust or half-body portrait
+– Neutral or dark textured Renaissance backdrop
+– Slight vignette around edges for depth
+
+Mood: regal, powerful, commanding — as if the pet is a noble general in a historical portrait.
+
+Do NOT alter the pet's species or face shape. Only replace the body and outfit with a Renaissance general uniform.
+
+Important: The subject is a ${petType}.`,
         n: 1,
         size: "1024x1792",
         quality: "hd"
