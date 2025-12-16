@@ -1,18 +1,15 @@
 // api/generate-portrait.js
-// Backend with GPT-4 Vision + DALL-E 3 + Rate Limiting
+// Backend with GPT-4 Vision + DALL-E 3 + Rate Limiting (CommonJS version)
 
-// In-memory storage for rate limiting (resets on deployment)
-// For production, consider using Redis or a database
+// In-memory storage for rate limiting
 const rateLimitStore = {
-  emails: new Map(), // email -> { count, resetTime }
-  ips: new Map()     // ip -> { count, resetTime }
+  emails: new Map(),
+  ips: new Map()
 };
 
 // Whitelist of emails that bypass rate limits
 const WHITELISTED_EMAILS = [
-  // Add your test emails here, e.g.:
-  // 'tedvanderende@yahoo.com',
-  // 'contact@pippora.com'
+  // Add your test emails here tedvanderende@yahoo.com
 ];
 
 function cleanupOldEntries(store) {
@@ -41,7 +38,7 @@ function checkRateLimit(identifier, store, limit, windowMs) {
   }
   
   if (record.count >= limit) {
-    const resetIn = Math.ceil((record.resetTime - now) / 1000 / 60); // minutes
+    const resetIn = Math.ceil((record.resetTime - now) / 1000 / 60);
     return { allowed: false, remaining: 0, resetIn };
   }
   
@@ -49,7 +46,7 @@ function checkRateLimit(identifier, store, limit, windowMs) {
   return { allowed: true, remaining: limit - record.count };
 }
 
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -68,7 +65,6 @@ export default async function handler(req, res) {
   try {
     const { email, petImageBase64 } = req.body;
 
-    // Validate inputs
     if (!email || !email.includes('@')) {
       return res.status(400).json({ error: 'Valid email is required' });
     }
@@ -77,7 +73,6 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Pet image is required' });
     }
 
-    // Get API keys and settings from environment variables
     const openaiKey = process.env.OPENAI_API_KEY;
     const mailerliteKey = process.env.MAILERLITE_API_KEY;
     const rateLimitEnabled = process.env.RATE_LIMIT_ENABLED === 'true';
@@ -86,17 +81,16 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'OpenAI API key not configured' });
     }
 
-    // RATE LIMITING (if enabled)
+    // RATE LIMITING
     if (rateLimitEnabled) {
       const isWhitelisted = WHITELISTED_EMAILS.includes(email.toLowerCase());
       
       if (!isWhitelisted) {
-        // Check email rate limit: 5 per day
         const emailLimit = checkRateLimit(
           email.toLowerCase(),
           rateLimitStore.emails,
           5,
-          24 * 60 * 60 * 1000 // 24 hours
+          24 * 60 * 60 * 1000
         );
         
         if (!emailLimit.allowed) {
@@ -106,7 +100,6 @@ export default async function handler(req, res) {
           });
         }
         
-        // Check IP rate limit: 7 per day
         const clientIp = req.headers['x-forwarded-for']?.split(',')[0] || 
                         req.headers['x-real-ip'] || 
                         req.socket.remoteAddress;
@@ -115,7 +108,7 @@ export default async function handler(req, res) {
           clientIp,
           rateLimitStore.ips,
           7,
-          24 * 60 * 60 * 1000 // 24 hours
+          24 * 60 * 60 * 1000
         );
         
         if (!ipLimit.allowed) {
@@ -131,8 +124,8 @@ export default async function handler(req, res) {
       }
     }
 
-    // STEP 1: Analyze the pet image with GPT-4 Vision
-    console.log('Step 1: Analyzing pet image with Vision...');
+    // STEP 1: Analyze with GPT-4 Vision
+    console.log('Step 1: Analyzing pet image...');
     
     const visionResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -173,8 +166,8 @@ export default async function handler(req, res) {
     const petDescription = visionData.choices[0].message.content;
     console.log('Pet description:', petDescription);
 
-    // STEP 2: Generate Renaissance portrait with DALL-E 3 using the detailed description
-    console.log('Step 2: Generating Renaissance portrait...');
+    // STEP 2: Generate with DALL-E 3
+    console.log('Step 2: Generating portrait...');
 
     const dallePrompt = `Create a Renaissance-era pet portrait based on this description: ${petDescription}
 
@@ -207,7 +200,7 @@ Do NOT alter the pet's species, breed, coloring, or distinctive features. Only a
         'Authorization': `Bearer ${openaiKey}`
       },
       body: JSON.stringify({
-        model: "dall-e-3", // Temporarily back to dall-e-3 until gpt-image-1.5 fully rolls out
+        model: "dall-e-3",
         prompt: dallePrompt,
         n: 1,
         size: "1024x1792",
@@ -222,7 +215,7 @@ Do NOT alter the pet's species, breed, coloring, or distinctive features. Only a
       return res.status(500).json({ error: 'Failed to generate portrait: ' + dalleData.error.message });
     }
 
-    // STEP 3: Add email to MailerLite
+    // STEP 3: Add to MailerLite
     if (mailerliteKey) {
       try {
         await fetch('https://connect.mailerlite.com/api/subscribers', {
@@ -248,7 +241,6 @@ Do NOT alter the pet's species, breed, coloring, or distinctive features. Only a
 
     console.log('Success! Portrait generated for:', email);
 
-    // Return the generated image URL
     return res.status(200).json({
       success: true,
       imageUrl: dalleData.data[0].url,
@@ -260,6 +252,4 @@ Do NOT alter the pet's species, breed, coloring, or distinctive features. Only a
     console.error('Unexpected error:', error);
     return res.status(500).json({ error: 'An unexpected error occurred: ' + error.message });
   }
-} return res.status(500).json({ error: 'An unexpected error occurred: ' + error.message });
-  }
-}
+};
