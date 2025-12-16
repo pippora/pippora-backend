@@ -160,7 +160,20 @@ module.exports = async (req, res) => {
 
     if (visionData.error) {
       console.error('Vision API error:', visionData.error);
-      return res.status(500).json({ error: 'Failed to analyze pet image: ' + visionData.error.message });
+      return res.status(500).json({ 
+        error: 'Failed to analyze pet image: ' + visionData.error.message,
+        step: 'vision',
+        details: visionData.error
+      });
+    }
+
+    if (!visionData.choices || !visionData.choices[0]) {
+      console.error('Vision response missing data:', visionData);
+      return res.status(500).json({ 
+        error: 'Vision API returned unexpected response',
+        step: 'vision',
+        details: visionData
+      });
     }
 
     const petDescription = visionData.choices[0].message.content;
@@ -169,29 +182,15 @@ module.exports = async (req, res) => {
     // STEP 2: Generate with DALL-E 3
     console.log('Step 2: Generating portrait...');
 
-    const dallePrompt = `Create a Renaissance-era pet portrait based on this description: ${petDescription}
+    const dallePrompt = `Renaissance general portrait: ${petDescription}
 
-CRITICAL: Keep the pet's exact features as described - same species, breed, coloring, markings, facial features, and expression.
+Style: Classical oil painting (1500-1700s) with chiaroscuro lighting, painterly brushstrokes, warm tones, dramatic shadows.
 
-The outfit should include:
-– ornate embroidered military coat
-– gold trims and shoulder epaulettes
-– a high collar
-– rich textures like velvet, brocade or leather
-– subtle metallic armor elements (optional, if stylistically appropriate)
+Outfit: Ornate military coat with gold epaulettes, high collar, medals, velvet and brocade textures.
 
-Match lighting, chiaroscuro lighting, shadows, and color tones so the pet's head blends seamlessly with the painted Renaissance-style body.
+Background: Dark neutral Renaissance backdrop with subtle vignette.
 
-The final artwork should look like a classical oil painting from the 1500–1700s, with dramatic lighting, painterly brushstrokes, deep shadows, and warm tones.
-
-Composition:
-– Bust or half-body portrait
-– Neutral or dark textured Renaissance backdrop
-– Slight vignette around edges for depth
-
-Mood: regal, powerful, commanding — as if the pet is a noble general in a historical portrait.
-
-Do NOT alter the pet's species, breed, coloring, or distinctive features. Only add the Renaissance general uniform and painting style.`;
+Important: Keep the pet's exact species, breed, coloring, and features as described. Only add the Renaissance uniform and painting style. Regal, commanding mood.`;
 
     const dalleResponse = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
@@ -212,7 +211,20 @@ Do NOT alter the pet's species, breed, coloring, or distinctive features. Only a
 
     if (dalleData.error) {
       console.error('DALL-E error:', dalleData.error);
-      return res.status(500).json({ error: 'Failed to generate portrait: ' + dalleData.error.message });
+      return res.status(500).json({ 
+        error: 'Failed to generate portrait: ' + dalleData.error.message,
+        step: 'dalle',
+        details: dalleData.error
+      });
+    }
+
+    if (!dalleData.data || !dalleData.data[0]) {
+      console.error('DALL-E response missing data:', dalleData);
+      return res.status(500).json({ 
+        error: 'DALL-E API returned unexpected response',
+        step: 'dalle',
+        details: dalleData
+      });
     }
 
     // STEP 3: Add to MailerLite
