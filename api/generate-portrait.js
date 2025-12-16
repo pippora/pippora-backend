@@ -207,7 +207,7 @@ Do NOT alter the pet's species, breed, coloring, or distinctive features. Only a
         'Authorization': `Bearer ${openaiKey}`
       },
       body: JSON.stringify({
-        model: "dall-e-3",
+        model: "gpt-image-1.5",
         prompt: dallePrompt,
         n: 1,
         size: "1024x1792",
@@ -258,6 +258,9 @@ Do NOT alter the pet's species, breed, coloring, or distinctive features. Only a
 
   } catch (error) {
     console.error('Unexpected error:', error);
+    return res.status(500).json({ error: 'An unexpected error occurred: ' + error.message });
+  }
+}
     return res.status(500).json({ error: 'An unexpected error occurred: ' + error.message });
   }
 }
